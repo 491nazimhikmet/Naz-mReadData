@@ -1,4 +1,7 @@
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -9,26 +12,34 @@ import java.util.Set;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.util.PDFTextStripper;
 import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.common.function.type4.Parser;
 import org.apache.pdfbox.pdmodel.font.PDFont;
+import org.apache.pdfbox.pdfparser.PDFParser;
 
 
 public class ReadData {
 
+	
 	public static void main(String[] args) {
 		PDDocument pd;
 		try {
 			 //  PDF file from the phone numbers are extracted
 			 File input = new File("2476_butun siirleri_nazim delta.pdf");
-			
+			 
 			 // StringBuilder to store the extracted text
 			 StringBuilder sb = new StringBuilder();
-			 pd = PDDocument.load(input);
+			 PDFParser parser = new PDFParser(new FileInputStream(input));
+	         parser.parse();
+	         pd = parser.getPDDocument();
+			// pd = PDDocument.load(input);
 			 //PDFTextStripper stripper = new PDFTextStripper();
 			 ReadFontOfText stripper = new ReadFontOfText();
-			 stripper.setStartPage(5); //Start extracting from page 3
-	         stripper.setEndPage(20); //Extract till page 5
+			 stripper.setStartPage(246); //Start extracting from page 3
+	         stripper.setEndPage(246); //Extract till page 5
 	         sb.append(stripper.getText(pd));
 	         System.out.println(sb.toString());
+	         
+	         
 	         
 	         
 	         /*System.out.println(stripper.getText(pd));//sb.toString());
@@ -75,5 +86,6 @@ public class ReadData {
 
 
 	}
+	
 
 }

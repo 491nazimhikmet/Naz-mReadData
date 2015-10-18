@@ -45,51 +45,52 @@ public class DBDemo {
 	// Database credentials
 	static final String USER = "root";
 	static final String PASS = "";
-
-	public static void mainmi(String[] args) {
-		Connection conn = null;
-		Statement stmt = null;
-		int onur = 22;
+	Connection conn = null;
+	
+	
+	public void startConnection(){
 		try {
-			// STEP 2: Register JDBC driver
 			Class.forName("com.mysql.jdbc.Driver");
-
-			// STEP 3: Open a connection
-			System.out.println("Connecting to a selected database...");
 			conn = DriverManager.getConnection(DB_URL, USER, PASS);
-			System.out.println("Connected database successfully...");
-
-			// STEP 4: Execute a query
-			System.out.println("Creating table in given database...");
-			stmt = conn.createStatement();
-
-			/*String sql = "CREATE TABLE REGISTRATION "
-					+ "(id INTEGER not NULL, " + " first VARCHAR(255), "
-					+ " last VARCHAR(255), " + " age INTEGER, "
-					+ " PRIMARY KEY ( id ))";
-
-			stmt.executeUpdate(sql);*/
-			System.out.println("Created table in given database...");
-		} catch (SQLException se) {
-			// Handle errors for JDBC
-			se.printStackTrace();
-		} catch (Exception e) {
-			// Handle errors for Class.forName
+		} catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} finally {
-			// finally block used to close resources
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void closeConnection(){
+		if (conn != null){
 			try {
-				if (stmt != null)
-					conn.close();
-			} catch (SQLException se) {
-			}// do nothing
-			try {
-				if (conn != null)
-					conn.close();
-			} catch (SQLException se) {
-				se.printStackTrace();
-			}// end finally try
-		}// end try
-		System.out.println("Goodbye!");
-	}// end main
-}// end JDBCExample
+				conn.close();
+			} catch (SQLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}	
+	}
+
+	
+	public void insertBook(String bkName, String bkYear, String bkLocation){
+		Statement stmt = null;
+		try {
+			stmt = conn.createStatement();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		String sql = "INSERT INTO book"
+				+ "Values ('','"+bkName+"','"+bkYear+"','"+bkLocation+"')";
+		
+		try {
+			stmt.executeUpdate(sql);
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+}
