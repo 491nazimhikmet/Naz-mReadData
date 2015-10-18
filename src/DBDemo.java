@@ -49,6 +49,7 @@ public class DBDemo {
 	public static void mainmi(String[] args) {
 		Connection conn = null;
 		Statement stmt = null;
+		int onur = 22;
 		try {
 			// STEP 2: Register JDBC driver
 			Class.forName("com.mysql.jdbc.Driver");
