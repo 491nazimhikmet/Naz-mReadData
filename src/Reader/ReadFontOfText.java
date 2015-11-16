@@ -6,79 +6,159 @@ import java.util.List;
 import org.apache.pdfbox.util.PDFTextStripper;
 import org.apache.pdfbox.util.TextPosition;
 
+import Model.DBDemo;
 
 
-public class ReadFontOfText extends PDFTextStripper {//PDFText2HTML
 
-	public ReadFontOfText() throws IOException {
+public class ReadFontOfText extends PDFTextStripper{//PDFText2HTML
+	
+	private Integer currentWorkId;
+	
+	private ReadFuncs rf;
+	
+	private String nextPoetryName;
+	private String currentPoetryName;
+	private boolean contToRead = false;
+	private Integer lastInsertedWorkLineId;
+	private Integer lastInsertedWordId;
+	DBDemo db;
+	
+	public ReadFontOfText(Integer WorkId,String workName,DBDemo db) throws IOException {
 		super("UTF-8");
-		// TODO Auto-generated constructor stub
+		currentWorkId = WorkId;
+		currentPoetryName = workName;
+		this.db = db;
+		initialize();
+		rf = new ReadFuncs();
+		lastInsertedWorkLineId = 0;
+		lastInsertedWordId = 0;
+	}
+	
+	private void initialize(){
+		
+		nextPoetryName = db.nextWorkName(currentWorkId).trim();
 	}
 	
 	public void writeString(String text, List<TextPosition> line) throws IOException{
-		StringBuilder builder = new StringBuilder();
-		String prevBaseFont = "";
-		Boolean isAllUpper = true;
-        for (TextPosition position : line)
-        {
-            String baseFont = position.getFont().getBaseFont();
-            
-            if(Character.isLetter(position.getCharacter().charAt(0))){
-            	if(!Character.isUpperCase(position.getCharacter().charAt(0))){ //burada karakter de önemli, * vs ise atla
-            		isAllUpper = false;
-            	}
-            }
-            
-            if (baseFont != null && !baseFont.equals(prevBaseFont))
-            {
-                builder.append('[').append(baseFont).append(']');//.append('{').append(aveHeight).append('}');
-                prevBaseFont = baseFont;
-            }
-            
-          /* builder.append( "String[" + position.getXDirAdj() + ","
-            + position.getYDirAdj() + " fs=" + position.getFontSize() + " xscale="
-            + position.getXScale() + " height=" + position.getHeightDir() + " space="
-            + position.getWidthOfSpace() + " width="
-            + position.getWidthDirAdj() + "]" + position.getCharacter()+"\t");*/
-            
-            for(int l = 0; l< position.getCharacter().length(); l++){
-            	//builder.append(position.getCharacter().charAt(l));
-            	
-            	//builder.append(":").append((int)position.getCharacter().charAt(l)).append("/");
-            }
-            
-            builder.append(convertToCorrectForm(position));
-            
-            
-            
-            
-        }
-        if(isAllUpper){
-        	builder.append("[Upper]");
-        }
-    	writeString(builder.toString());
-
-        
+				
+		String lineString = rf.convertListToString(line);
+		System.out.println(lineString);
+		if(normalizeString(lineString).toLowerCase().contains(normalizeString(nextPoetryName).toLowerCase())){
+			contToRead = false;
+		}
+		String a = normalizeString(lineString);
+		String b = normalizeString(currentPoetryName);
+		if(normalizeString(lineString).toLowerCase().contains(normalizeString(currentPoetryName).toLowerCase())){
+			contToRead = true;
+		}
+		
+		if(contToRead == true){
+		
+			float[] borders = getLineStartEnd(line);
+			
+			lastInsertedWorkLineId = db.insertWorkline(lineString.trim(), borders[0], borders[1], currentWorkId);
+			getTheWords(line);
+		}
+		
+		
 	}
 	
-	private String convertToCorrectForm(TextPosition text){
-		String positionText =text.getCharacter();
-		if(((int)text.getCharacter().charAt(0)) == 164){
-			positionText = "ð";
-		}else if(((int)text.getCharacter().charAt(0)) == 8250){
-			positionText = "ý";
-		}else if(((int)text.getCharacter().charAt(0)) == 8249){
-			positionText = "I";
-		}else if(text.getCharacter().length()>1){
-			if(text.getCharacter().charAt(0) == 'f' && text.getCharacter().charAt(1) == 'l' ){
-				positionText = "þ";
+	
+	private float[] getLineStartEnd(List<TextPosition> line){
+		TextPosition first = line.get(0);
+		TextPosition last = line.get(line.size()-1);
+		
+		float[] borderArr  = new float[2];
+		borderArr[0] = first.getXDirAdj();
+		borderArr[1] = last.getXDirAdj();
+		
+		return borderArr;
+	}
+	
+	
+	private void getTheWords(List<TextPosition> line){
+		float wordStart = 0;
+		float wordEnd = 0;
+		boolean isNextStart = false;
+		StringBuilder builder = new StringBuilder();
+		int startIndex=0;
+		
+		for(int i = 0 ; i< line.size(); i++){
+			TextPosition pos = line.get(i);
+			if(i == 0){
+				wordStart = pos.getXDirAdj();
+				builder.delete(0, builder.length());
+				startIndex = i;
 			}
-			if(text.getCharacter().charAt(0) == 'f' && text.getCharacter().charAt(1) == 'i' ){
-				positionText = "Þ";
+			
+			if(isNextStart == true){
+				isNextStart = false;
+				wordStart = pos.getXDirAdj();
+				builder.delete(0, builder.length());
+				startIndex = i;
 			}
+			
+			
+			if(rf.convertToCorrectForm(pos).trim().equals("") || i == (line.size()-1)){
+				if(i == (line.size()-1)){
+					builder.append(rf.convertToCorrectForm(pos));
+					i++;
+				}
+				isNextStart = true;
+				wordEnd = pos.getXDirAdj();	
+				List<TextPosition> word = line.subList(startIndex, i);
+				lastInsertedWordId = db.insertWord(builder.toString(), wordStart, wordEnd, lastInsertedWorkLineId, rf.isBold(word), rf.isItalic(word), getFont(word));
+				getTheCharacters(word);
+			}
+			
+			builder.append(rf.convertToCorrectForm(pos));	
+			
 		}
-		return positionText;//+" pos:"+(int)text.getCharacter().charAt(0)+" ";//kitap sayfasý yanýndaki • iiçin ascii 8226
+	}
+	
+	private void getTheCharacters(List<TextPosition> word){
+		
+		for(int i = 0 ; i< word.size(); i++){
+			TextPosition cha = word.get(i);
+			
+			List<TextPosition> sublist = word.subList(i, i);
+			db.insertWordCharacter(rf.convertToCorrectForm(cha), cha.getXDirAdj(), cha.getXDirAdj(), lastInsertedWordId, rf.isBold(sublist), rf.isItalic(sublist), getFont(sublist));
+		}
 	}
     
-    
+	private String getFont(List<TextPosition> word){
+		String baseFont = "";
+		for (TextPosition position : word)
+        {
+            baseFont = position.getFont().getBaseFont();
+            
+        }
+		return baseFont;
+	}
+	
+	private String normalizeString(String str){
+		for(int i = 0; i< str.length(); i++){
+			int asciiVal =	(int)str.charAt(i);
+			if(!((asciiVal>=65 && asciiVal <=90) || (asciiVal>=97 && asciiVal <=122))){
+				str = str.replaceAll(("["+str.charAt(i)+"]"), "");
+				i--;
+			}
+		}
+		str = str.replaceAll("Ð", "");
+		str = str.replaceAll("ð", "");
+		str = str.replaceAll("Ü", "");
+		str = str.replaceAll("ü", "");
+		str = str.replaceAll("Ý", "");
+		str = str.replaceAll("i", "");
+		str = str.replaceAll("I", "");
+		str = str.replaceAll("ý", "");
+		str = str.replaceAll("ö", "");
+		str = str.replaceAll("Ö", "");
+		str = str.replaceAll("Ç", "");
+		str = str.replaceAll("ç", "");
+		str = str.replaceAll("Þ", "");
+		str = str.replaceAll("þ", "");
+		return str;
+	}
+
 }

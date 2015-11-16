@@ -18,7 +18,7 @@ public class DBDemo {
 	Connection conn = null;
 	
 	public DBDemo(){
-		
+		this.startConnection();
 	}
 	
 	
@@ -48,8 +48,7 @@ public class DBDemo {
 	}
 
 	
-	public int insertBook(String bkName, String bkYear, String bkLocation){
-		this.startConnection();
+	public int insertBook(String bkName, String bkYear, String bkLocation,int bookType){ ///bookType = 1 : þiir kitabý. bookType = 2: þiirlerin sonradan birleþtirildiði kitaplar
 		Statement stmt = null;
 		Integer newRecordId = 0;
 		try {
@@ -59,8 +58,8 @@ public class DBDemo {
 			e.printStackTrace();
 		}
 		
-		String sql = "INSERT INTO `book`(`Name`, `Year`, `Location`)"	
-				+ "Values ('"+bkName+"','"+bkYear+"','"+bkLocation+"')";
+		String sql = "INSERT INTO `book`(`Name`, `Year`, `Location`,`type`)"	
+				+ "Values ('"+bkName+"','"+bkYear+"','"+bkLocation+"',"+bookType+")";
 		
 		try {
 			newRecordId = stmt.executeUpdate(sql,Statement.RETURN_GENERATED_KEYS);
@@ -73,12 +72,10 @@ public class DBDemo {
 			e.printStackTrace();
 		}
 		
-		this.closeConnection();
 		return newRecordId;
 	}
 	
 	public void updateBookName(String bkName, int bookId){
-		this.startConnection();
 		Statement stmt = null;
 		try {
 			stmt = conn.createStatement();
@@ -95,13 +92,11 @@ public class DBDemo {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		this.startConnection();
 	}
 	
-	
-	
-	public void insertWord(String text, double wordStart, double wordFinish, Integer workLineId, boolean isBold, boolean isItalic, String font ){
+	public Integer insertWord(String text, double wordStart, double wordFinish, Integer workLineId, boolean isBold, boolean isItalic, String font ){	
 		Statement stmt = null;
+		Integer newRecordId = 0;
 		try {
 			stmt = conn.createStatement();
 		} catch (SQLException e) {
@@ -109,15 +104,20 @@ public class DBDemo {
 			e.printStackTrace();
 		}
 		
-		String sql = "INSERT INTO `word`(`wordId`, `text`, `workStart`, `workFinish`, `workLineId`, `isBold`, `isItalic`, `font`)"+
-		" VALUES ('',"+text+","+wordStart+","+wordFinish+","+workLineId+","+isBold+","+isItalic+","+font+")";
+		String sql = "INSERT INTO `word`( `text`, `wordStart`, `wordFinish`, `workLineId`, `isBold`, `isItalic`, `font`)"+
+				" VALUES ('"+text+"',"+wordStart+","+wordFinish+","+workLineId+","+isBold+","+isItalic+",'"+font+"')";
 		
 		try {
-			stmt.executeUpdate(sql);
+			newRecordId = stmt.executeUpdate(sql,Statement.RETURN_GENERATED_KEYS);
+			ResultSet rs = stmt.getGeneratedKeys();
+	        if (rs.next()){
+	        	newRecordId=rs.getInt(1);
+	        }
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		return newRecordId;
 	}
 	
 	public void insertWordCharacter(String characterText, double characterStart, double characterFinish, Integer wordId, boolean isBold, boolean isItalic, String font ){
@@ -129,8 +129,8 @@ public class DBDemo {
 			e.printStackTrace();
 		}
 		
-		String sql = "INSERT INTO `wordcharacter`(`characterId`, `characterText`, `characterStart`, `characterFinish`, `wordId`, `isBold`, `isItalic`, `font`)"+
-		" VALUES ('',"+characterText+","+characterStart+","+characterFinish+","+wordId+","+isBold+","+isItalic+","+font+")";
+		String sql = "INSERT INTO `wordcharacter`( `characterText`, `characterStart`, `characterFinish`, `wordId`, `isBold`, `isItalic`, `font`)"+
+		" VALUES ('"+characterText+"',"+characterStart+","+characterFinish+","+wordId+","+isBold+","+isItalic+",'"+font+"')";
 		
 		try {
 			stmt.executeUpdate(sql);
@@ -140,7 +140,33 @@ public class DBDemo {
 		}
 	}
 	
-	public void insertWork(String Name, String Year, int BookId, String LocationOfComp, Integer length, String Title, String font ){
+	public int insertWork(String Name, String Year, int BookId, String LocationOfComp, Integer pageNum, String Title, String font ){
+		Statement stmt = null;
+		Integer newRecordId = 0;
+		try {
+			stmt = conn.createStatement();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		String sql = "INSERT INTO `work`( `Name`, `Year`, `BookId`, `LocationOfComp`, `pageNum`, `Title`)"+
+		" VALUES ('"+Name+"','"+Year+"',"+BookId+",'"+LocationOfComp+"',"+pageNum+",'"+Title+"')";
+		
+		try {
+			newRecordId = stmt.executeUpdate(sql,Statement.RETURN_GENERATED_KEYS);
+			ResultSet rs = stmt.getGeneratedKeys();
+	        if (rs.next()){
+	        	newRecordId=rs.getInt(1);
+	        }
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return newRecordId;
+	}
+	
+	public void updateWork(String Name, Integer workId){
 		Statement stmt = null;
 		try {
 			stmt = conn.createStatement();
@@ -149,8 +175,7 @@ public class DBDemo {
 			e.printStackTrace();
 		}
 		
-		String sql = "INSERT INTO `work`(`WorkId`, `Name`, `Year`, `BookId`, `LocationOfComp`, `length`, `Title`)"+
-		" VALUES ('',"+Name+","+Year+","+BookId+","+LocationOfComp+","+length+","+Title+")";
+		String sql = "UPDATE work SET Name = CONCAT(Name, ' "+Name+"') WHERE WorkId = "+workId+"";
 		
 		try {
 			stmt.executeUpdate(sql);
@@ -160,8 +185,11 @@ public class DBDemo {
 		}
 	}
 	
-	public void insertWorkline(String line, double lineStart, double lineFinish, Integer workTextId){
+	
+	public String nextWorkName(Integer workId){
 		Statement stmt = null;
+		ResultSet rs = null;
+		String workName = "";
 		try {
 			stmt = conn.createStatement();
 		} catch (SQLException e) {
@@ -169,19 +197,49 @@ public class DBDemo {
 			e.printStackTrace();
 		}
 		
-		String sql = "INSERT INTO `workline`(`lineId`, `line`, `lineStart`, `lineFinish`, `workTextId`)"+
-		" VALUES ('',"+line+","+lineStart+","+lineFinish+","+workTextId+")";
+		String sql = "select * from work where WorkId = "+(workId+1)+"";
 		
 		try {
-			stmt.executeUpdate(sql);
+			rs = stmt.executeQuery(sql);
+			rs.next();
+			workName = rs.getString("Name");
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		return workName;
+	}
+
+	
+	public Integer insertWorkline(String line, double lineStart, double lineFinish, Integer workId){
+		Statement stmt = null;
+		Integer newRecordId = 0;
+		try {
+			stmt = conn.createStatement();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		String sql = "INSERT INTO `workline`( `line`, `lineStart`, `lineFinish`, `workId`)"+
+		" VALUES ('"+line+"',"+lineStart+","+lineFinish+","+workId+")";
+		
+		try {
+			newRecordId = stmt.executeUpdate(sql,Statement.RETURN_GENERATED_KEYS);
+			ResultSet rs = stmt.getGeneratedKeys();
+	        if (rs.next()){
+	        	newRecordId=rs.getInt(1);
+	        }
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return newRecordId;
 	}
 	
-	public void insertWorkText(String Text, Integer numLines, Integer WorkId){
+	public ResultSet  getAllWorks(int start, int end){
 		Statement stmt = null;
+		ResultSet rs = null;
 		try {
 			stmt = conn.createStatement();
 		} catch (SQLException e) {
@@ -189,14 +247,15 @@ public class DBDemo {
 			e.printStackTrace();
 		}
 		
-		String sql = "INSERT INTO `worktext`(`WorkTextId`, `Text`, `numLines`, `WorkId`)"+
-		" VALUES ('',"+Text+","+numLines+","+WorkId+")";
+		String sql = "select a.*,b.pageNum as finishPage, b.Name as BookName from work a, work b, book k where b.WorkId = a.workId +1 and a.BookId = k.BookId and a.workId <="
+							+end+" and a.workId >= "+start+" ";
 		
 		try {
-			stmt.executeUpdate(sql);
+			rs = stmt.executeQuery(sql);
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		return rs;
 	}
 }
